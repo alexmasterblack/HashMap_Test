@@ -1,0 +1,966 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+        <meta charset="utf-8"/>
+	    <title>hash_map.hpp</title>
+	    <link href="../../third-party/google-code-prettify/prettify-CppCoverage.css" type="text/css" rel="stylesheet" />
+	    <script type="text/javascript" src="../../third-party/google-code-prettify/prettify.js"></script>
+	</head>
+	<body onload="prettyPrint()">
+        <h4></h4>
+		<pre class="prettyprint lang-cpp linenums">
+#pragma once
+
+#include &lt;functional&gt;
+#include &lt;memory&gt;
+#include &lt;utility&gt;
+#include &lt;type_traits&gt;
+#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;cstring&gt;
+#include &lt;cmath&gt;
+#include &lt;iostream&gt;
+
+namespace fefu
+{
+template&lt;typename T&gt;
+class allocator {
+public:
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using pointer = T*;
+    using const_pointer = const T*;
+    using reference = typename std::add_lvalue_reference&lt;T&gt;::type;
+    using const_reference = typename std::add_lvalue_reference&lt;const T&gt;::type;
+    using value_type = T;
+
+    allocator() noexcept = default;
+	
+    allocator(const allocator&amp;) noexcept = default;
+	
+    template &lt;class U&gt;
+    allocator(const allocator&lt;U&gt;&amp;) noexcept {};
+	
+    ~allocator() = default;
+
+<span style = "background-color:#dfd">    pointer allocate(size_type n = 1) {
+        return static_cast&lt;pointer&gt;(::operator new(n * sizeof(value_type)));
+    }
+    void deallocate(pointer p, size_type n) noexcept {
+        if (p != nullptr)
+            ::operator delete(p, n * sizeof(value_type));
+    }</span>
+};
+
+template&lt;typename ValueType&gt;
+class hash_map_iterator {
+public:
+    template&lt;typename&gt;
+    friend class hash_map_const_iterator;
+    template&lt;typename, typename, typename, typename, typename&gt;
+    friend class hash_map;
+
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = ValueType;
+    using difference_type = std::ptrdiff_t;
+    using reference = ValueType&amp;;
+    using pointer = ValueType*;
+
+<span style = "background-color:#dfd">    hash_map_iterator() noexcept : data(nullptr), status_table(0), position(0) {}</span>
+
+<span style = "background-color:#dfd">    hash_map_iterator(pointer data, std::vector&lt;int&gt; status_table, size_t position) : data(data), status_table(status_table), position(position) {}</span>
+
+<span style = "background-color:#dfd">    hash_map_iterator(const hash_map_iterator&amp; other) noexcept : data(other.data), status_table(other.status_table), position(other.position) {}</span>
+
+<span style = "background-color:#dfd">    reference operator*() const {</span>
+        //ÑÐ¼ÐµÑÐµÐ½Ð¸Ðµ Ð´Ð»Ñ ÑÐ»ÐµÐ¼ÐµÐ½ÑÐ°, Ð¸Ð¼Ñ Ð¼Ð°ÑÑÐ¸Ð²Ð° - ÑÑÐ¾ ÑÐºÐ°Ð·Ð°ÑÐµÐ»Ñ Ð½Ð° Ð°Ð´ÑÐµÑ ÐµÐ³Ð¾ Ð¿ÐµÑÐ²Ð¾Ð³Ð¾ ÑÐ»ÐµÐ¼ÐµÐ½ÑÐ°
+<span style = "background-color:#dfd">        return *(data + position);
+    }</span>
+
+<span style = "background-color:#dfd">    pointer operator-&gt;() const {
+        return data + position;
+    }</span>
+
+    // prefix ++
+<span style = "background-color:#dfd">    hash_map_iterator&amp; operator++() {
+        for (size_t i = position + 1; i &lt; status_table.size(); i++) {
+            if (status_table[i] == 1) {
+                position = i;
+                return *this;</span>
+            }
+<span style = "background-color:#dfd">        }
+        position = status_table.size();
+        return *this;
+    }</span>
+    // postfix ++
+<span style = "background-color:#dfd">    hash_map_iterator operator++(int number) {
+        return ++(*this);
+    }</span>
+
+<span style = "background-color:#dfd">    friend bool operator==(const hash_map_iterator&lt;ValueType&gt;&amp; our, const hash_map_iterator&lt;ValueType&gt;&amp; other) {
+        return (our.data + our.position == other.data + other.position);
+    }</span>
+
+<span style = "background-color:#dfd">    friend bool operator!=(const hash_map_iterator&lt;ValueType&gt;&amp; our, const hash_map_iterator&lt;ValueType&gt;&amp; other) {
+        return !(our == other);
+    }</span>
+private:
+    size_t position;
+    pointer data;
+    std::vector&lt;int&gt; status_table;
+};
+
+template&lt;typename ValueType&gt;
+class hash_map_const_iterator {
+// Shouldn't give non const references on value
+public:
+    template&lt;typename, typename, typename, typename, typename&gt;
+    friend class hash_map;
+
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = ValueType;
+    using difference_type = std::ptrdiff_t;
+    using reference = const ValueType&amp;;
+    using pointer = const ValueType*;
+
+<span style = "background-color:#dfd">    hash_map_const_iterator() noexcept : data(nullptr), status_table(0), position(0) {}</span>
+
+<span style = "background-color:#dfd">    hash_map_const_iterator(const pointer data, const std::vector&lt;int&gt; status_table, const size_t position) : data(data), status_table(status_table), position(position) {}</span>
+
+<span style = "background-color:#dfd">    hash_map_const_iterator(const hash_map_const_iterator&amp; other) noexcept : data(other.data), status_table(other.status_table), position(other.position) {}</span>
+
+<span style = "background-color:#dfd">    hash_map_const_iterator(const hash_map_iterator&lt;ValueType&gt;&amp; other) noexcept : data(other.data), status_table(other.status_table), position(other.position) {}</span>
+
+<span style = "background-color:#dfd">    reference operator*() const {
+        return *(data + position);
+    }</span>
+
+<span style = "background-color:#dfd">    pointer operator-&gt;() const {
+        return data + position;
+    }</span>
+
+    // prefix ++
+<span style = "background-color:#dfd">    hash_map_const_iterator&amp; operator++() {
+        for (size_t i = position + 1; i &lt; status_table.size(); ++i) {
+            if (status_table[i] == 1) {
+                position = i;
+                return *this;</span>
+            }
+<span style = "background-color:#dfd">        }
+        position = status_table.size();
+        return *this;
+    }</span>
+    // postfix ++
+<span style = "background-color:#dfd">    hash_map_const_iterator operator++(int) {
+        return ++(*this);
+    }</span>
+
+<span style = "background-color:#dfd">    friend bool operator==(const hash_map_const_iterator&lt;ValueType&gt;&amp; our, const hash_map_const_iterator&lt;ValueType&gt;&amp; other) {
+        return (our.data + our.position == other.data + other.position);
+    }</span>
+
+<span style = "background-color:#dfd">    friend bool operator!=(const hash_map_const_iterator&lt;ValueType&gt;&amp; our, const hash_map_const_iterator&lt;ValueType&gt;&amp; other) {
+        return !(our == other);
+    }</span>
+private:
+    size_t position;
+    pointer data;
+    const std::vector&lt;int&gt; status_table;
+};
+template&lt;typename K, typename T,
+	   typename Hash = std::hash&lt;K&gt;,
+	   typename Pred = std::equal_to&lt;K&gt;,
+	   typename Alloc = allocator&lt;std::pair&lt;const K, T&gt;&gt;&gt;
+class hash_map
+{
+public:
+    using key_type = K;
+    using mapped_type = T;
+    using hasher = Hash;
+    using key_equal = Pred;
+    using allocator_type = Alloc;
+    using value_type = std::pair&lt;const key_type, mapped_type&gt;;
+    using reference = value_type&amp;;
+    using const_reference = const value_type&amp;;
+    using iterator = hash_map_iterator&lt;value_type&gt;;
+    using const_iterator = hash_map_const_iterator&lt;value_type&gt;;
+    using size_type = std::size_t;
+
+    /// Default constructor.
+<span style = "background-color:#dfd">    hash_map() : data(nullptr), status_table(0), count_buckets(0) {}</span>
+
+<span style = "background-color:#dfd">    ~hash_map() {
+        clear();
+        alloc.deallocate(data, count_buckets);
+    }</span>
+
+    /**
+     *  @brief  Default constructor creates no elements.
+     *  @param n  Minimal initial number of buckets.
+     */
+
+<span style = "background-color:#dfd">    explicit hash_map(size_type n) : data(alloc.allocate(n)), status_table(n), count_buckets(n) {}</span>
+
+
+    /**
+     *  @brief  Builds an %hash_map from a range.
+     *  @param  first  An input iterator.
+     *  @param  last  An input iterator.
+     *  @param  n  Minimal initial number of buckets.
+     *
+     *  Create an %hash_map consisting of copies of the elements from
+     *  [first,last).  This is linear in N (where N is
+     *  distance(first,last)).
+     */
+    template&lt;typename InputIterator&gt;
+<span style = "background-color:#dfd">    hash_map(InputIterator first, InputIterator last, size_type n = 0) : hash_map(n) {
+        insert(first, last);
+    }</span>
+
+    /// Copy constructor.
+<span style = "background-color:#dfd">    hash_map(const hash_map&amp; other) : data(alloc.allocate(other.bucket_count())), status_table(other.status_table),
+        count_buckets(other.count_buckets), non_empty_buckets(other.non_empty_buckets), alloc(alloc), hash(other.hash), equal(other.equal), max_load(other.max_load) {
+        for (size_type i = 0; i &lt; status_table.size(); i++) {
+            if (status_table[i] != 0) {
+                new(data + i) value_type(other.data[i]);</span>
+            }
+<span style = "background-color:#dfd">        }
+    }</span>
+
+    /// Move constructor.
+<span style = "background-color:#dfd">    hash_map(hash_map&amp;&amp; other) : hash_map() {
+        swap(other);
+    }</span>
+
+    /**
+     *  @brief Creates an %hash_map with no elements.
+     *  @param a An allocator object.
+     */
+<span style = "background-color:#dfd">    explicit hash_map(const allocator_type&amp; a) : alloc(a), data(nullptr), status_table(0), count_buckets(0) {}</span>
+
+    /*
+    *  @brief Copy constructor with allocator argument.
+    * @param  uset  Input %hash_map to copy.
+    * @param  a  An allocator object.
+    */
+<span style = "background-color:#dfd">    hash_map(const hash_map&amp; umap, const allocator_type&amp; a) : alloc(a) {
+        hash = umap.hash_function();
+        equal = umap.key_eq();
+        data = alloc.allocate(umap.bucket_count());
+        count_buckets = umap.count_buckets;
+        non_empty_buckets = umap.non_empty_buckets;
+        status_table = umap.status_table;
+        max_load = umap.max_load;
+        for (size_type i = 0; i &lt; count_buckets; i++) {
+            if (status_table[i] != 0) {
+                new(data + i) value_type(umap.data[i]);</span>
+            }
+<span style = "background-color:#dfd">        }
+    }</span>
+
+    /*
+    *  @brief  Move constructor with allocator argument.
+    *  @param  uset Input %hash_map to move.
+    *  @param  a    An allocator object.
+    */
+<span style = "background-color:#dfd">    hash_map(hash_map&amp;&amp; umap, const allocator_type&amp; a) : hash_map() {
+        swap(umap);</span>
+        alloc = a;
+<span style = "background-color:#dfd">    }</span>
+
+    /**
+     *  @brief  Builds an %hash_map from an initializer_list.
+     *  @param  l  An initializer_list.
+     *  @param n  Minimal initial number of buckets.
+     *
+     *  Create an %hash_map consisting of copies of the elements in the
+     *  list. This is linear in N (where N is @a l.size()).
+     */
+    //hash_map(std::initializer_list&lt;value_type&gt; l, size_type n = 0) : data(alloc.allocate(n)), status_table(n), count_buckets(n) {
+    //    insert(l);
+    //}
+<span style = "background-color:#dfd">    hash_map(std::initializer_list&lt;value_type&gt; l, size_type n = 0) : hash_map(n) {
+        insert(l);
+    }</span>
+
+    /// Copy assignment operator.
+<span style = "background-color:#dfd">    hash_map&amp; operator=(const hash_map&amp; other) {
+        hash_map support(other);
+        swap(support);
+        return *this;
+    }</span>
+
+    /// Move assignment operator.
+<span style = "background-color:#dfd">    hash_map&amp; operator=(hash_map&amp;&amp; other) {
+        swap(other);
+        return *this;
+    }</span>
+
+    /**
+     *  @brief  %hash_map list assignment operator.
+     *  @param  l  An initializer_list.
+     *
+     *  This function fills an %hash_map with copies of the elements in
+     *  the initializer list @a l.
+     *
+     *  Note that the assignment completely changes the %hash_map and
+     *  that the resulting %hash_map's size is the same as the number
+     *  of elements assigned.
+     */
+<span style = "background-color:#dfd">    hash_map&amp; operator=(std::initializer_list&lt;value_type&gt; l) {
+        hash_map table(l);
+        swap(table);
+        return *this;
+    }</span>
+
+    ///  Returns the allocator object used by the %hash_map.
+<span style = "background-color:#dfd">    allocator_type get_allocator() const noexcept {
+        return alloc;
+    }</span>
+
+    // size and capacity:
+
+    ///  Returns true if the %hash_map is empty.
+<span style = "background-color:#dfd">    bool empty() const noexcept {
+        return non_empty_buckets == 0;
+    }</span>
+
+    ///  Returns the size of the %hash_map.
+<span style = "background-color:#dfd">    size_type size() const noexcept {
+        return non_empty_buckets;
+    }</span>
+
+    ///  Returns the maximum size of the %hash_map.
+<span style = "background-color:#dfd">    size_type max_size() const noexcept {</span>
+        //Ð²Ð¾Ð·Ð²ÑÐ°ÑÐ°ÐµÑ Ð¿ÑÐµÐ´ÐµÐ» ÑÐ¸Ð¿Ð°
+<span style = "background-color:#dfd">        return std::numeric_limits&lt;size_type&gt;::max();
+    }</span>
+
+    // iterators.
+
+    /**
+     *  Returns a read/write iterator that points to the first element in the
+     *  %hash_map.
+     */
+<span style = "background-color:#dfd">    iterator begin() noexcept {</span>
+        //Ð¿ÐµÑÐ²ÑÐ¹ ÑÐ»ÐµÐ¼ÐµÐ½Ñ, Ñ ÐºÐ¾ÑÐ¾ÑÐ¾Ð³Ð¾ Ð² ÑÑÐ°ÑÑÑÐµ ÐµÐ´Ð¸Ð½Ð¸ÑÐ°, Ð¸ÑÐºÐ¾Ð¼ÑÐ¹
+<span style = "background-color:#dfd">        for (size_type i = 0; i &lt; status_table.size(); i++) {
+            if (status_table[i] == 1) {
+                return iterator(data, status_table, i);</span>
+            }
+<span style = "background-color:#dfd">        }
+        return iterator(data, status_table, count_buckets);
+    }</span>
+
+    //@{
+    /**
+     *  Returns a read-only (constant) iterator that points to the first
+     *  element in the %hash_map.
+     */
+
+<span style = "background-color:#dfd">    const_iterator begin() const noexcept {
+        return cbegin();
+    }</span>
+
+<span style = "background-color:#dfd">    const_iterator cbegin() const noexcept {
+        for (size_type i = 0; i &lt; status_table.size(); i++) {
+            if (status_table[i] == 1) {
+                return const_iterator(data, status_table, i);</span>
+            }
+<span style = "background-color:#dfd">        }
+        return cend();
+    }</span>
+
+    /**
+     *  Returns a read/write iterator that points one past the last element in
+     *  the %hash_map.
+     */
+<span style = "background-color:#dfd">    iterator end() noexcept {
+        return iterator(data, status_table, count_buckets);
+    }</span>
+
+    //@{
+    /**
+     *  Returns a read-only (constant) iterator that points one past the last
+     *  element in the %hash_map.
+     */
+<span style = "background-color:#dfd">    const_iterator end() const noexcept {
+        return cend();
+    }</span>
+
+<span style = "background-color:#dfd">    const_iterator cend() const noexcept {
+        return const_iterator(data, status_table, count_buckets);
+    }</span>
+    //@}
+
+    // modifiers.
+
+    /**
+     *  @brief Attempts to build and insert a std::pair into the
+     *  %hash_map.
+     *
+     *  @param args  Arguments used to generate a new pair instance (see
+     *	        std::piecewise_contruct for passing arguments to each
+    *	        part of the pair constructor).
+    *
+    *  @return  A pair, of which the first element is an iterator that points
+    *           to the possibly inserted pair, and the second is a bool that
+    *           is true if the pair was actually inserted.
+    *
+    *  This function attempts to build and insert a (key, value) %pair into
+    *  the %hash_map.
+    *  An %hash_map relies on unique keys and thus a %pair is only
+    *  inserted if its first element (the key) is not already present in the
+    *  %hash_map.
+    *
+    *  Insertion requires amortized constant time.
+    */
+    //variadic templates
+    template&lt;typename... _Args&gt;
+<span style = "background-color:#dfd">    std::pair&lt;iterator, bool&gt; emplace(_Args&amp;&amp;... args) {
+        return insert(value_type(std::forward&lt;_Args&gt;(args)...));
+    }</span>
+
+    /**
+     *  @brief Attempts to build and insert a std::pair into the
+     *  %hash_map.
+     *
+     *  @param k    Key to use for finding a possibly existing pair in
+     *                the hash_map.
+     *  @param args  Arguments used to generate the .second for a
+     *                new pair instance.
+     *
+     *  @return  A pair, of which the first element is an iterator that points
+     *           to the possibly inserted pair, and the second is a bool that
+     *           is true if the pair was actually inserted.
+     *
+     *  This function attempts to build and insert a (key, value) %pair into
+     *  the %hash_map.
+     *  An %hash_map relies on unique keys and thus a %pair is only
+     *  inserted if its first element (the key) is not already present in the
+     *  %hash_map.
+     *  If a %pair is not inserted, this function has no effect.
+     *
+     *  Insertion requires amortized constant time.
+     */
+    template &lt;typename... _Args&gt;
+<span style = "background-color:#dfd">    std::pair&lt;iterator, bool&gt; try_emplace(const key_type&amp; k, _Args&amp;&amp;... args) {</span>
+        //piecewise_construct - Ð·Ð½Ð°ÑÐµÐ½Ð¸Ðµ Ð¿ÐµÑÐµÐ´Ð°ÐµÑÑÑ Ð² ÐºÐ°ÑÐµÑÑÐ²Ðµ Ð¿ÐµÑÐ²Ð¾Ð³Ð¾ Ð°ÑÐ³ÑÐ¼ÐµÐ½ÑÐ° Ð´Ð»Ñ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ñ Ð¿Ð°ÑÐ½Ð¾Ð³Ð¾ Ð¾Ð±ÑÐµÐºÑÐ°
+        //forward_as_turple - ÐºÐ¾ÑÑÐµÐ¶ Ð¸Ð¼ÐµÐµÑ ÑÐ»ÐµÐ¼ÐµÐ½ÑÑ Ð´Ð°Ð½Ð½ÑÑ ÑÑÑÐ»ÐºÐ¸ rvalue, ÐºÐ¾Ð³Ð´Ð° rvalue Ð¸ÑÐ¿Ð¾Ð»ÑÐ·ÑÑÑÑÑ Ð² ÐºÐ°ÑÐµÑÑÐ²Ðµ Ð°ÑÐ³ÑÐ¼ÐµÐ½ÑÐ¾Ð², Ñ lvalue ÑÐ°ÐºÐ¶Ðµ.
+<span style = "background-color:#dfd">        return insert(value_type(std::piecewise_construct, std::forward_as_tuple(k), std::forward_as_tuple(std::forward&lt;_Args&gt;(args)...)));
+    }</span>
+
+    // move-capable overload
+    template &lt;typename... _Args&gt;
+<span style = "background-color:#dfd">    std::pair&lt;iterator, bool&gt; try_emplace(key_type&amp;&amp; k, _Args&amp;&amp;... args) {
+        return insert(value_type(std::piecewise_construct, std::forward_as_tuple(k), std::forward_as_tuple(std::forward&lt;_Args&gt;(args)...)));
+    }</span>
+
+    //@{
+    /**
+     *  @brief Attempts to insert a std::pair into the %hash_map.
+     *  @param x Pair to be inserted (see std::make_pair for easy
+     *	     creation of pairs).
+    *
+    *  @return  A pair, of which the first element is an iterator that
+    *           points to the possibly inserted pair, and the second is
+    *           a bool that is true if the pair was actually inserted.
+    *
+    *  This function attempts to insert a (key, value) %pair into the
+    *  %hash_map. An %hash_map relies on unique keys and thus a
+    *  %pair is only inserted if its first element (the key) is not already
+    *  present in the %hash_map.
+    *
+    *  Insertion requires amortized constant time.
+    */
+<span style = "background-color:#dfd">    std::pair&lt;iterator, bool&gt; insert(const value_type&amp; x) {
+        if (count_buckets == 0) {
+            rehash((count_buckets + 1) * 2);</span>
+        }
+<span style = "background-color:#dfd">        iterator element = find(x.first);
+        if (element != end()) {
+            return std::make_pair(element, false);</span>
+        }
+<span style = "background-color:#dfd">        size_type index = hash(x.first) % count_buckets;
+        while (status_table[index] == 1) {
+            index = (index + hash(x.first)) % count_buckets;
+        }
+        if (status_table[index] == 0) {</span>
+            //placement new, ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ Ð¾Ð±ÑÐµÐºÑÐ° Ð² Ð¿Ð°Ð¼ÑÑÐ¸
+<span style = "background-color:#dfd">            non_empty_buckets++;
+            new (data + index) value_type(x);
+            status_table[index] = 1;</span>
+        }
+<span style = "background-color:#dfd">        if (load_factor() &gt;= max_load_factor()) {
+            rehash(2 * count_buckets);
+            return std::make_pair(find(x.first), true);</span>
+        }
+<span style = "background-color:#dfd">        return std::make_pair(iterator(data, status_table, index), true);
+    }</span>
+
+<span style = "background-color:#dfd">    std::pair&lt;iterator, bool&gt; insert(value_type&amp;&amp; x) {
+        if (count_buckets == 0) {
+            rehash((count_buckets + 1) * 2);</span>
+        }
+<span style = "background-color:#dfd">        iterator element = find(x.first);
+        if (element != end()) {
+            return std::make_pair(element, false);</span>
+        }
+<span style = "background-color:#dfd">        size_type index = hash(x.first) % count_buckets;
+        while (status_table[index] == 1) {
+            index = (index + hash(x.first)) % count_buckets;
+        }
+        if (status_table[index] == 0) {</span>
+            //placement new, ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ Ð¾Ð±ÑÐµÐºÑÐ° Ð² Ð¿Ð°Ð¼ÑÑÐ¸
+<span style = "background-color:#dfd">            non_empty_buckets++;
+            new (data + index) value_type(std::forward&lt;value_type&gt;(x));
+            status_table[index] = 1;</span>
+        }
+<span style = "background-color:#dfd">        if (load_factor() &gt;= max_load_factor()) {
+            rehash(2 * count_buckets);
+            return std::make_pair(find(x.first), true);</span>
+        }
+<span style = "background-color:#dfd">        return std::make_pair(iterator(data, status_table, index), true);
+    }</span>
+
+    //@}
+
+    /**
+     *  @brief A template function that attempts to insert a range of
+     *  elements.
+     *  @param  first  Iterator pointing to the start of the range to be
+     *                   inserted.
+     *  @param  last  Iterator pointing to the end of the range.
+     *
+     *  Complexity similar to that of the range constructor.
+     */
+    template&lt;typename _InputIterator&gt;
+<span style = "background-color:#dfd">    void insert(_InputIterator first, _InputIterator last) {
+        for (; first != last; ++first) {
+            insert(*first);
+        }
+    }</span>
+
+    /**
+     *  @brief Attempts to insert a list of elements into the %hash_map.
+     *  @param  l  A std::initializer_list&lt;value_type&gt; of elements
+     *               to be inserted.
+     *
+     *  Complexity similar to that of the range constructor.
+     */
+<span style = "background-color:#dfd">    void insert(std::initializer_list&lt;value_type&gt; l) {
+        insert(l.begin(), l.end());
+    }</span>
+
+
+    /**
+     *  @brief Attempts to insert a std::pair into the %hash_map.
+     *  @param k    Key to use for finding a possibly existing pair in
+     *                the map.
+     *  @param obj  Argument used to generate the .second for a pair
+     *                instance.
+     *
+     *  @return  A pair, of which the first element is an iterator that
+     *           points to the possibly inserted pair, and the second is
+     *           a bool that is true if the pair was actually inserted.
+     *
+     *  This function attempts to insert a (key, value) %pair into the
+     *  %hash_map. An %hash_map relies on unique keys and thus a
+     *  %pair is only inserted if its first element (the key) is not already
+     *  present in the %hash_map.
+     *  If the %pair was already in the %hash_map, the .second of
+     *  the %pair is assigned from obj.
+     *
+     *  Insertion requires amortized constant time.
+     */
+    template &lt;typename _Obj&gt;
+<span style = "background-color:#dfd">    std::pair&lt;iterator, bool&gt; insert_or_assign(const key_type&amp; k, _Obj&amp;&amp; obj) {
+        auto element = find(k);
+        if (element != end()) {
+            element-&gt;second = obj;
+            return std::make_pair(element, true);</span>
+        }
+<span style = "background-color:#dfd">        return insert(std::make_pair(k, std::forward&lt;_Obj&gt;(obj)));
+    }</span>
+
+    // move-capable overload
+    template &lt;typename _Obj&gt;
+<span style = "background-color:#dfd">    std::pair&lt;iterator, bool&gt; insert_or_assign(key_type&amp;&amp; k, _Obj&amp;&amp; obj) {
+        auto element = find(k);
+        if (element != end()) {
+            element-&gt;second = obj;
+            return std::make_pair(element, true);</span>
+        }
+<span style = "background-color:#dfd">        return insert(std::make_pair(k, std::forward&lt;_Obj&gt;(obj)));
+    }</span>
+
+    //@{
+    /**
+     *  @brief Erases an element from an %hash_map.
+     *  @param  position  An iterator pointing to the element to be erased.
+     *  @return An iterator pointing to the element immediately following
+     *          @a position prior to the element being erased. If no such
+     *          element exists, end() is returned.
+     *
+     *  This function erases an element, pointed to by the given iterator,
+     *  from an %hash_map.
+     *  Note that this function only erases the element, and that if the
+     *  element is itself a pointer, the pointed-to memory is not touched in
+     *  any way.  Managing the pointer is the user's responsibility.
+     */
+<span style = "background-color:#dfd">    iterator erase(const_iterator position) {
+        size_type index = position.position;
+        if (index &lt; count_buckets &amp;&amp; status_table[index] == 1) {
+            status_table[index] = -1;
+            non_empty_buckets--;
+            (data + index)-&gt;~value_type();
+            position++;
+            return iterator(data, status_table, position.position);</span>
+        }
+<span style = "background-color:#dfd">        return end();
+    }</span>
+
+    // LWG 2059.
+<span style = "background-color:#dfd">    iterator erase(iterator position) {
+        size_type index = position.position;
+        if (index &lt; count_buckets &amp;&amp; status_table[index] == 1) {
+            status_table[index] = -1;
+            non_empty_buckets--;
+            (data + index)-&gt;~value_type();
+            return position++;</span>
+        }
+<span style = "background-color:#dfd">        return end();
+    }</span>
+    //@}
+
+    /**
+     *  @brief Erases elements according to the provided key.
+     *  @param  x  Key of element to be erased.
+     *  @return  The number of elements erased.
+     *
+     *  This function erases all the elements located by the given key from
+     *  an %hash_map. For an %hash_map the result of this function
+     *  can only be 0 (not present) or 1 (present).
+     *  Note that this function only erases the element, and that if the
+     *  element is itself a pointer, the pointed-to memory is not touched in
+     *  any way.  Managing the pointer is the user's responsibility.
+     */
+<span style = "background-color:#dfd">    size_type erase(const key_type&amp; x) {
+        auto element = find(x);
+        if (element != end()) {
+            erase(element);
+            return 1;</span>
+        }
+<span style = "background-color:#dfd">        return 0;
+    }</span>
+
+    /**
+     *  @brief Erases a [first,last) range of elements from an
+     *  %hash_map.
+     *  @param  first  Iterator pointing to the start of the range to be
+     *                  erased.
+     *  @param last  Iterator pointing to the end of the range to
+     *                be erased.
+     *  @return The iterator @a last.
+     *
+     *  This function erases a sequence of elements from an %hash_map.
+     *  Note that this function only erases the elements, and that if
+     *  the element is itself a pointer, the pointed-to memory is not touched
+     *  in any way.  Managing the pointer is the user's responsibility.
+     */
+<span style = "background-color:#dfd">    iterator erase(const_iterator first, const_iterator last) {
+        for (; first != last; ++first) {
+            erase(first);
+        }
+        return iterator(data, status_table, last.position);
+    }</span>
+
+    /**
+     *  Erases all elements in an %hash_map.
+     *  Note that this function only erases the elements, and that if the
+     *  elements themselves are pointers, the pointed-to memory is not touched
+     *  in any way.  Managing the pointer is the user's responsibility.
+     */
+<span style = "background-color:#dfd">    void clear() noexcept {
+        if (non_empty_buckets &gt; 0) {</span>
+            //Ð½ÑÐ¶Ð½Ð¾ ÑÑÐµÑÐµÑÑ ÑÐ°Ð¼Ð¸ ÑÐ»ÐµÐ¼ÐµÐ½ÑÑ, Ð½Ðµ ÑÑÐ¾Ð³Ð°Ñ Ð¿Ð°Ð¼ÑÑÑ
+<span style = "background-color:#dfd">            for (; begin() != end(); ++begin()) {
+                erase(begin());
+            }
+            status_table.assign(count_buckets, 0);
+            non_empty_buckets = 0;</span>
+        }
+<span style = "background-color:#dfd">    }</span>
+
+    /**
+     *  @brief  Swaps data with another %hash_map.
+     *  @param  x  An %hash_map of the same element and allocator
+     *  types.
+     *
+     *  This exchanges the elements between two %hash_map in constant
+     *  time.
+     *  Note that the global std::swap() function is specialized such that
+     *  std::swap(m1,m2) will feed to this function.
+     */
+<span style = "background-color:#dfd">    void swap(hash_map&amp; other) {</span>
+        using std::swap;
+<span style = "background-color:#dfd">        swap(data, other.data);
+        swap(alloc, other.get_allocator());
+        swap(status_table, other.status_table);
+        swap(count_buckets, other.count_buckets);
+        swap(non_empty_buckets, other.non_empty_buckets);
+        swap(max_load, other.max_load);
+        swap(equal, other.key_eq());
+        swap(hash, other.hash_function());
+    }</span>
+
+    template&lt;typename _H2, typename _P2&gt;
+<span style = "background-color:#dfd">    void merge(hash_map&lt;K, T, _H2, _P2, Alloc&gt;&amp; source) {
+        for (auto i = source.begin(); i != source.end(); i++) {
+            auto element = insert(*i);
+            if (element.second) {
+                source.erase(i);</span>
+            }
+<span style = "background-color:#dfd">        }
+    }</span>
+
+    template&lt;typename _H2, typename _P2&gt;
+<span style = "background-color:#dfd">    void merge(hash_map&lt;K, T, _H2, _P2, Alloc&gt;&amp;&amp; source) {
+        for (auto i = source.begin(); i != source.end(); i++) {
+            auto element = insert(*i);
+            if (element.second) {
+                source.erase(i);</span>
+            }
+<span style = "background-color:#dfd">        }
+    }</span>
+
+    // observers.
+
+    ///  Returns the hash functor object with which the %hash_map was
+    ///  constructed.
+<span style = "background-color:#dfd">    Hash hash_function() const {
+        return hash;
+    }</span>
+
+    ///  Returns the key comparison object with which the %hash_map was
+    ///  constructed.
+<span style = "background-color:#dfd">    Pred key_eq() const {
+        return equal;
+    }</span>
+
+    // lookup.
+
+    //@{
+    /**
+     *  @brief Tries to locate an element in an %hash_map.
+     *  @param  x  Key to be located.
+     *  @return  Iterator pointing to sought-after element, or end() if not
+     *           found.
+     *
+     *  This function takes a key and tries to locate the element with which
+     *  the key matches.  If successful the function returns an iterator
+     *  pointing to the sought after element.  If unsuccessful it returns the
+     *  past-the-end ( @c end() ) iterator.
+     */
+<span style = "background-color:#dfd">    iterator find(const key_type&amp; x) {
+        size_type index = hash(x) % count_buckets;</span>
+        //Ð´Ð¾Ð¿ÑÑÑÐ¸Ð¼ Ð¿ÑÐ¾Ð¸Ð·Ð¾ÑÐ»Ð° ÐºÐ¾Ð»Ð»Ð¸Ð·Ð¸Ñ Ð¸ ÑÐ»ÐµÐ¼ÐµÐ½Ñ Ð¾ÐºÐ°Ð·Ð°Ð»ÑÑ Ð² Ð´ÑÑÐ³Ð¾Ð¼ Ð¼ÐµÑÑÐµ, Ð¸ÑÐµÐ¼
+<span style = "background-color:#dfd">        while (data[index].first != x &amp;&amp; status_table[index] != 0) {
+            index = (index + hash(x)) % count_buckets;
+        }</span>
+        //ÐµÑÐ»Ð¸ Ð¿Ð¾ ÑÑÐ¾Ð¼Ñ Ð¸Ð½Ð´ÐµÐºÑÑ Ð»ÐµÐ¶Ð¸Ñ Ð½ÑÐ¶Ð½ÑÐ¹ ÑÐ»ÐµÐ¼ÐµÐ½Ñ Ð¸ Ð² ÑÑÐ°ÑÑÑÐµ ÐµÐ³Ð¾ Ð¼ÐµÑÑÐ¾ ÑÐ°Ð²Ð½Ð¾ 1
+<span style = "background-color:#dfd">        if (data[index].first == x &amp;&amp; status_table[index] == 1) {
+            return iterator(data, status_table, index);
+        } else return iterator(data, status_table, count_buckets);
+    }</span>
+
+<span style = "background-color:#dfd">    const_iterator find(const key_type&amp; x) const {
+        size_type index = hash(x) % count_buckets;</span>
+        //Ð´Ð¾Ð¿ÑÑÑÐ¸Ð¼ Ð¿ÑÐ¾Ð¸Ð·Ð¾ÑÐ»Ð° ÐºÐ¾Ð»Ð»Ð¸Ð·Ð¸Ñ Ð¸ ÑÐ»ÐµÐ¼ÐµÐ½Ñ Ð¾ÐºÐ°Ð·Ð°Ð»ÑÑ Ð² Ð´ÑÑÐ³Ð¾Ð¼ Ð¼ÐµÑÑÐµ, Ð¸ÑÐµÐ¼
+<span style = "background-color:#dfd">        while (data[index].first != x &amp;&amp; status_table[index] != 0) {
+            index = (index + hash(x)) % count_buckets;
+        }</span>
+        //ÐµÑÐ»Ð¸ Ð¿Ð¾ ÑÑÐ¾Ð¼Ñ Ð¸Ð½Ð´ÐµÐºÑÑ Ð»ÐµÐ¶Ð¸Ñ Ð½ÑÐ¶Ð½ÑÐ¹ ÑÐ»ÐµÐ¼ÐµÐ½Ñ Ð¸ Ð² ÑÑÐ°ÑÑÑÐµ ÐµÐ³Ð¾ Ð¼ÐµÑÑÐ¾ ÑÐ°Ð²Ð½Ð¾ 1
+<span style = "background-color:#dfd">        if (data[index].first == x &amp;&amp; status_table[index] == 1) {
+            return const_iterator(data, status_table, index);
+        } else return cend();
+    }</span>
+    //@}
+
+    /**
+     *  @brief  Finds the number of elements.
+     *  @param  x  Key to count.
+     *  @return  Number of elements with specified key.
+     *
+     *  This function only makes sense for %unordered_multimap; for
+     *  %hash_map the result will either be 0 (not present) or 1
+     *  (present).
+     */
+<span style = "background-color:#dfd">    size_type count(const key_type&amp; x) const {
+        return (find(x) != end()) ? 1 : 0;
+    }</span>
+
+    /**
+     *  @brief  Finds whether an element with the given key exists.
+     *  @param  x  Key of elements to be located.
+     *  @return  True if there is any element with the specified key.
+     */
+<span style = "background-color:#dfd">    bool contains(const key_type&amp; x) const {
+        return count(x);
+    }</span>
+
+    //@{
+    /**
+     *  @brief  Subscript ( @c [] ) access to %hash_map data.
+     *  @param  k  The key for which data should be retrieved.
+     *  @return  A reference to the data of the (key,data) %pair.
+     *
+     *  Allows for easy lookup with the subscript ( @c [] )operator.  Returns
+     *  data associated with the key specified in subscript.  If the key does
+     *  not exist, a pair with that key is created using default values, which
+     *  is then returned.
+     *
+     *  Lookup requires constant time.
+     */
+<span style = "background-color:#dfd">    mapped_type&amp; operator[](const key_type&amp; k) {
+        auto element = find(k);
+        if (element == end()) {
+            insert(std::make_pair(k, mapped_type()));</span>
+        }
+<span style = "background-color:#dfd">        return at(k);
+    }</span>
+
+<span style = "background-color:#dfd">    mapped_type&amp; operator[](key_type&amp;&amp; k) {
+        auto element = find(k);
+        if (element == end()) {
+            insert(std::make_pair(k, mapped_type()));</span>
+        }
+<span style = "background-color:#dfd">        return at(k);
+    }</span>
+    //@}
+
+    //@{
+    /**
+     *  @brief  Access to %hash_map data.
+     *  @param  k  The key for which data should be retrieved.
+     *  @return  A reference to the data whose key is equal to @a k, if
+     *           such a data is present in the %hash_map.
+     *  @throw  std::out_of_range  If no such data is present.
+     */
+<span style = "background-color:#dfd">    mapped_type&amp; at(const key_type&amp; k) {
+        auto element = find(k);
+        if (element == end()) {
+            throw std::out_of_range("Out of range");</span>
+        }
+<span style = "background-color:#dfd">        return element-&gt;second;
+    }</span>
+
+    const mapped_type&amp; at(const key_type&amp; k) const {
+        (*this).at(k);
+    }
+    //@}
+
+    // bucket interface.
+
+    /// Returns the number of buckets of the %hash_map.
+<span style = "background-color:#dfd">    size_type bucket_count() const noexcept {
+        return count_buckets;
+    }</span>
+
+    /*
+    * @brief  Returns the bucket index of a given element.
+    * @param  _K  A key instance.
+    * @return  The key bucket index.
+    */
+<span style = "background-color:#dfd">    size_type bucket(const key_type&amp; _K) const {
+        size_type index = hash(_K) % count_buckets;
+        while (data[index].first != _K &amp;&amp; status_table[index] != 0) {
+            index = (index + hash(_K)) % count_buckets;
+        }
+        return index;
+    }</span>
+
+    // hash policy.
+
+    /// Returns the average number of elements per bucket.
+<span style = "background-color:#dfd">    float load_factor() const noexcept {
+        if (count_buckets == 0) {
+            return 0;
+        } else return static_cast&lt;float&gt;(non_empty_buckets) / static_cast&lt;float&gt;(count_buckets);
+    }</span>
+
+    /// Returns a positive number that the %hash_map tries to keep the
+    /// load factor less than or equal to.
+<span style = "background-color:#dfd">    float max_load_factor() const noexcept {
+        return max_load;
+    }</span>
+
+    /**
+     *  @brief  Change the %hash_map maximum load factor.
+     *  @param  z The new maximum load factor.
+     */
+<span style = "background-color:#dfd">    void max_load_factor(float z) {
+        max_load = z;
+    }</span>
+
+    /**
+     *  @brief  May rehash the %hash_map.
+     *  @param  n The new number of buckets.
+     *
+     *  Rehash will occur only if the new number of buckets respect the
+     *  %hash_map maximum load factor.
+     */
+<span style = "background-color:#dfd">    void rehash(size_type n) {
+        hash_map table(n);
+        table.insert(begin(), end());
+        *this = table;
+    }</span>
+
+    /**
+     *  @brief  Prepare the %hash_map for a specified number of
+     *          elements.
+     *  @param  n Number of elements required.
+     *
+     *  Same as rehash(ceil(n / max_load_factor())).
+     */
+<span style = "background-color:#dfd">    void reserve(size_type n) {
+        rehash(ceil(static_cast&lt;float&gt;(n) / static_cast&lt;float&gt;(max_load_factor())));
+    }</span>
+
+<span style = "background-color:#dfd">    bool operator==(const hash_map&amp; other) const {
+        if (size() != other.size()) {
+            return false;</span>
+        }
+<span style = "background-color:#dfd">        for (auto&amp; thing : other) {
+            auto element = find(thing.first);
+            if (element == end()) {
+                return false;</span>
+            }
+<span style = "background-color:#dfd">            if (thing.second != element-&gt;second) {
+                return false;</span>
+            }
+<span style = "background-color:#dfd">        }
+        return true;
+    }</span>
+
+private:
+    //ÑÐ°Ð¼ ÐºÐ¾Ð½ÑÐµÐ¹Ð½ÐµÑ Ð±ÑÐ´ÐµÑ Ð·Ð´ÐµÑÑ
+    value_type* data;
+    //Ð¸Ð½ÑÐ¾ÑÐ¼Ð°ÑÐ¸Ñ Ð¾ ÑÐ¾ÑÑÐ¾ÑÐ½Ð¸Ð¸ ÑÐ°Ð±Ð»Ð¸ÑÑ
+    std::vector&lt;int&gt; status_table;
+    //Ð²ÑÐ´ÐµÐ»ÐµÐ½Ð¸Ðµ Ð¿Ð°Ð¼ÑÑÐ¸
+    allocator_type alloc;
+    //ÑÑÐ°Ð²Ð½ÐµÐ½Ð¸Ðµ
+    key_equal equal;
+    //ÑÐµÑ
+    hasher hash;
+    //ÑÐ¸ÑÐ»Ð¾ ÐºÐ¾ÑÐ·Ð¸Ð½
+<span style = "background-color:#dfd">    size_type count_buckets = 0;</span>
+    //ÑÐ¸ÑÐ»Ð¾ Ð·Ð°Ð½ÑÑÑÑ ÐºÐ¾ÑÐ·Ð¸Ð½
+<span style = "background-color:#dfd">    size_type non_empty_buckets = 0;</span>
+    //Ð¼Ð°ÐºÑÐ¸Ð¼ÑÐ¼ Ð·Ð°Ð³ÑÑÐ¶ÐµÐ½Ð½Ð¾ÑÑÐ¸ ÑÐ°Ð±Ð»Ð¸ÑÑ
+<span style = "background-color:#dfd">    float max_load = 0.75;</span>
+};
+} // namespace fefu</pre>
+	</body>
+</html>

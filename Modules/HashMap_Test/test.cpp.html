@@ -1,0 +1,622 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+        <meta charset="utf-8"/>
+	    <title>test.cpp</title>
+	    <link href="../../third-party/google-code-prettify/prettify-CppCoverage.css" type="text/css" rel="stylesheet" />
+	    <script type="text/javascript" src="../../third-party/google-code-prettify/prettify.js"></script>
+	</head>
+	<body onload="prettyPrint()">
+        <h4></h4>
+		<pre class="prettyprint lang-cpp linenums">
+#include "pch.h"
+#include &lt;vector&gt;
+#include &lt;unordered_map&gt;
+
+<span style = "background-color:#dfd">TEST(Allocator, A) {</span>
+	fefu::allocator&lt;int&gt; alloc;
+<span style = "background-color:#dfd">	int* place = alloc.allocate();
+	*place = 23;
+	EXPECT_EQ(*place, 23);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Allocator, B) {</span>
+	fefu::allocator&lt;int&gt; alloc;
+<span style = "background-color:#dfd">	int* data = alloc.allocate(50);
+	alloc.deallocate(data, 50);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Allocator, C) {
+	fefu::hash_map&lt;int, int&gt; table({ {21, 1}, {0, 23}, {2, 3}, {-1, 11}, {-12, 11}, {21, 1} });
+	fefu::hash_map&lt;int, int&gt; other_table(table.get_allocator());
+	table.insert(std::make_pair(7, 1));
+	table.insert(std::make_pair(2, 2));
+	table.insert(std::make_pair(3, 3));
+}</span>
+
+<span style = "background-color:#dfd">TEST(Allocator, D) {
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(5);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	elements[4] = { "help", 5 };
+	fefu::hash_map&lt;std::string, int&gt; table(elements.begin(), elements.end());
+	fefu::hash_map&lt;std::string, int&gt; other_table(table, table.get_allocator());</span>
+
+<span style = "background-color:#dfd">	ASSERT_TRUE(other_table.contains("death"));
+	ASSERT_TRUE(other_table.contains("rest"));
+	ASSERT_TRUE(other_table.contains("in"));
+	ASSERT_TRUE(other_table.contains("peace"));
+	ASSERT_TRUE(other_table.contains("help"));
+}</span>
+
+<span style = "background-color:#dfd">TEST(Allocator, E) {
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(5);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	elements[4] = { "help", 5 };
+	fefu::hash_map&lt;std::string, int&gt; table(elements.begin(), elements.end());
+	fefu::hash_map&lt;std::string, int&gt; other_table(std::move(table), table.get_allocator());</span>
+
+<span style = "background-color:#dfd">	ASSERT_TRUE(other_table.contains("death"));
+	ASSERT_TRUE(other_table.contains("rest"));
+	ASSERT_TRUE(other_table.contains("in"));
+	ASSERT_TRUE(other_table.contains("peace"));
+	ASSERT_TRUE(other_table.contains("help"));
+}
+TEST(Iterators, A) {
+	fefu::hash_map&lt;int, std::string&gt; table(7);
+	table.insert(std::make_pair(7, "make"));
+	table.insert(std::make_pair(2, "me"));
+	table.insert(std::make_pair(3, "happy"));
+	auto iterator = table.begin();
+	ASSERT_TRUE("me" == iterator-&gt;second);
+	ASSERT_TRUE("make" == iterator.operator++()-&gt;second);
+	ASSERT_TRUE("happy" == iterator.operator++(1)-&gt;second);
+	ASSERT_TRUE(table.end() == iterator.operator++(1));</span>
+
+<span style = "background-color:#dfd">	for (auto i = table.begin(); i != table.end(); i++) {
+		std::cout &lt;&lt; (*i).second &lt;&lt; std::endl;
+	}
+}</span>
+
+<span style = "background-color:#dfd">TEST(Iterators, B) {
+	fefu::hash_map&lt;int, std::string&gt; table(7);
+	table.insert(std::make_pair(7, "make"));
+	table.insert(std::make_pair(2, "me"));
+	table.insert(std::make_pair(3, "happy"));</span>
+
+<span style = "background-color:#dfd">	auto iterator = table.cbegin();
+	ASSERT_TRUE("me" == iterator-&gt;second);
+	ASSERT_TRUE("make" == iterator.operator++()-&gt;second);
+	ASSERT_TRUE("happy" == iterator.operator++(1)-&gt;second);
+	ASSERT_TRUE(table.cend() == iterator.operator++(1));</span>
+
+<span style = "background-color:#dfd">	for (auto i = table.begin(); i != table.end(); i++) {
+		std::cout &lt;&lt; i-&gt;first &lt;&lt; " " &lt;&lt; i-&gt;second &lt;&lt; std::endl;
+	}
+}</span>
+
+<span style = "background-color:#dfd">TEST(Iterators, C) {
+	fefu::hash_map&lt;int, int&gt; table({ {21, 1}, {0, 23}, {2, 3}, {-1, 11}, {-12, 11}, {21, 1} });
+	fefu::hash_map_iterator&lt;std::pair&lt;const int, int&gt;&gt; itererator_one = table.begin();
+	fefu::hash_map_const_iterator&lt;std::pair&lt;const int, int&gt;&gt; begin = itererator_one;
+	fefu::hash_map_const_iterator&lt;std::pair&lt;const int, int&gt;&gt; end = table.end();</span>
+
+<span style = "background-color:#dfd">	ASSERT_FALSE(begin == end);
+	for (auto i = table.cbegin(); i != table.cend(); i++) {
+		std::cout &lt;&lt; (*i).first &lt;&lt; " " &lt;&lt; (*i).second &lt;&lt; std::endl;
+	}
+}</span>
+
+<span style = "background-color:#dfd">TEST(Iterators, D) {
+	fefu::hash_map_iterator&lt;std::pair&lt;int, int&gt;&gt; one;
+	fefu::hash_map_const_iterator&lt;std::pair&lt;int, int&gt;&gt; two;
+}</span>
+
+<span style = "background-color:#dfd">TEST(Constructors, A) {
+	fefu::hash_map&lt;std::string, int&gt; table(7);
+	EXPECT_EQ(table.bucket_count(), 7);
+	EXPECT_EQ(table.size(), 0);
+	EXPECT_EQ(table.size(), 0);
+	ASSERT_TRUE(table.empty());
+}</span>
+
+<span style = "background-color:#dfd">TEST(Constructors, B) {
+	fefu::hash_map&lt;std::string, int&gt; table;
+	EXPECT_EQ(table.bucket_count(), 0);
+	EXPECT_EQ(table.size(), 0);
+	EXPECT_EQ(table.size(), 0);
+	EXPECT_EQ(table.load_factor(), 0);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Constructors, C) {
+	fefu::hash_map&lt;std::string, int&gt; table_one(10);
+	table_one.insert(std::pair&lt;std::string, int&gt;("help", 4));
+	table_one.insert(std::pair&lt;const std::string, int&gt;("death", 1));
+	table_one.insert(std::pair&lt;const std::string, int&gt;("make", 8));
+	table_one.insert(std::pair&lt;const std::string, int&gt;("peace", 6));
+	table_one.insert(std::pair&lt;const std::string, int&gt;("death", 5));</span>
+
+<span style = "background-color:#dfd">	fefu::hash_map&lt;std::string, int&gt; table(table_one);
+	ASSERT_TRUE(table.contains("death"));
+	ASSERT_FALSE(table.contains("rest"));
+	ASSERT_FALSE(table.contains("in"));
+	ASSERT_TRUE(table.contains("peace"));
+	ASSERT_TRUE(table.contains("help"));
+}</span>
+
+<span style = "background-color:#dfd">TEST(Constructors, D) {
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(5);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	elements[4] = { "help", 5 };
+	fefu::hash_map&lt;std::string, int&gt; table(elements.begin(), elements.end());
+	std::cout &lt;&lt; table.contains("death");
+}</span>
+
+<span style = "background-color:#dfd">TEST(Constructors, E) {
+	fefu::hash_map&lt;std::string, int&gt; table_one(10);
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(5);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	elements[4] = { "help", 5 };
+	table_one.insert(elements.begin(), elements.end());
+	fefu::hash_map&lt;std::string, int&gt; table = std::move(table_one);
+	ASSERT_TRUE(table_one.empty());
+	ASSERT_TRUE(table.size() == 5);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Constructors, F) {
+	fefu::hash_map&lt;std::string, int&gt; table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	EXPECT_EQ(table.at("death"), 1);
+	ASSERT_FALSE(table.cbegin() == table.cend());
+}</span>
+
+<span style = "background-color:#dfd">TEST(Constructors, G) {
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(9);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	elements[4] = { "help", 5 };
+	fefu::hash_map&lt;std::string, int&gt; table(elements.begin(), elements.end(), 7);
+	std::cout &lt;&lt; table.contains("death");
+}</span>
+
+<span style = "background-color:#dfd">TEST(Assignment, A) {
+	fefu::hash_map&lt;std::string, int&gt; table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	fefu::hash_map&lt;std::string, int&gt; new_table;
+	new_table = table;</span>
+
+<span style = "background-color:#dfd">	ASSERT_TRUE(table.contains("death") == new_table.contains("death"));
+	ASSERT_TRUE(table.contains("rest") == new_table.contains("rest"));
+	ASSERT_TRUE(table.contains("help") == new_table.contains("help"));
+	ASSERT_TRUE(table.contains("my") == new_table.contains("my"));
+	ASSERT_TRUE(table.contains("give") == new_table.contains("give"));
+}</span>
+
+<span style = "background-color:#dfd">TEST(Assignment, B) {
+	fefu::hash_map&lt;std::string, int&gt; another_table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	fefu::hash_map&lt;std::string, int&gt; table;
+	table = { {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} };
+	ASSERT_TRUE(table == another_table);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Assignment, C) {
+	fefu::hash_map&lt;std::string, int&gt; table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	fefu::hash_map&lt;std::string, int&gt; new_table;
+	new_table = std::move(table);
+	ASSERT_TRUE(table.bucket_count() == 0);
+	ASSERT_TRUE(new_table.contains("death"));
+	ASSERT_TRUE(new_table.contains("rest"));
+	ASSERT_TRUE(new_table.contains("help"));
+	ASSERT_TRUE(new_table.contains("my"));
+	ASSERT_TRUE(new_table.contains("give"));
+	ASSERT_TRUE(new_table.size() == 5);
+}</span>
+
+<span style = "background-color:#dfd">TEST(End_Begin, A) {
+	fefu::hash_map&lt;int, char&gt; table;
+	EXPECT_EQ(table.begin(), table.end());
+	ASSERT_TRUE(table.cbegin() == table.cend());
+}</span>
+
+<span style = "background-color:#dfd">TEST(End_Begin, B) {
+	fefu::hash_map&lt;std::string, int&gt; table(2);
+	std::pair&lt;std::string, int&gt; element{ "yes", 1 };
+	table.insert(element);
+	ASSERT_TRUE(table.begin()-&gt;first == "yes");
+	ASSERT_TRUE(table.begin()-&gt;second == 1);
+}</span>
+
+<span style = "background-color:#dfd">TEST(End_Begin, C) {
+	fefu::hash_map&lt;std::string, int&gt; table(4);
+	table.insert(static_cast&lt;std::pair&lt;std::string, int&gt;&gt;(std::make_pair("death", 1)));
+	ASSERT_TRUE(table.begin().operator++() == table.cend());
+}</span>
+
+<span style = "background-color:#dfd">TEST(End_Begin, D) {
+	fefu::hash_map&lt;std::string, int&gt; table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	ASSERT_FALSE(table.cbegin() == table.cend());
+}</span>
+
+<span style = "background-color:#dfd">TEST(Insert, A) {
+	fefu::hash_map&lt;std::string, int&gt; table(10);
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(5);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	elements[4] = { "help", 5 };</span>
+
+<span style = "background-color:#dfd">	table.insert(elements.begin(), elements.end());
+	ASSERT_TRUE(table.contains("death"));
+	ASSERT_TRUE(table.contains("rest"));
+	ASSERT_TRUE(table.contains("in"));
+	ASSERT_TRUE(table.contains("peace"));
+	ASSERT_TRUE(table.contains("help"));
+}</span>
+
+<span style = "background-color:#dfd">TEST(InsertOrAssign, A) {
+	fefu::hash_map&lt;std::string, int&gt; table(10);
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(5);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	elements[4] = { "help", 5 };</span>
+
+	//Ð² ÑÑÐ¾Ð¼ ÑÐ»ÑÑÐ°Ðµ Ð±ÑÐ´ÐµÑ key_type&amp;&amp; k, _Obj&amp;&amp; obj ÑÐ°Ðº ÐºÐ°Ðº rvalue
+<span style = "background-color:#dfd">	table.insert_or_assign("death", 1);
+	table.insert_or_assign("rest", 2);
+	ASSERT_TRUE(table.contains("death"));
+	ASSERT_TRUE(table.contains("rest"));
+	ASSERT_TRUE(table.at("rest") == 2);
+	table.insert_or_assign("rest", 12);
+	ASSERT_TRUE(table.at("rest") == 12);
+}</span>
+
+<span style = "background-color:#dfd">TEST(InsertOrAssign, B) {
+	fefu::hash_map&lt;std::string, int&gt; table(10);
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(5);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	elements[4] = { "help", 5 };
+	std::string word = "please";
+	int number = 89;</span>
+	//Ð² ÑÑÐ¾Ð¼ ÑÐ»ÑÑÐ°Ðµ Ð±ÑÐ´ÐµÑ const key_type&amp; k, _Obj&amp;&amp; obj, ÑÐ°Ðº ÐºÐ°Ðº lvalue
+<span style = "background-color:#dfd">	table.insert_or_assign(word, number);
+	ASSERT_TRUE(table.contains("please"));
+	ASSERT_TRUE(table.at(word) == 89);
+	int new_number = 11;
+	table.insert_or_assign(word, new_number);
+	ASSERT_TRUE(table.at(word) == 11);
+}</span>
+
+<span style = "background-color:#dfd">TEST(InsertOrAssign, C) {
+	fefu::hash_map&lt;std::string, int&gt; table(10);
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(5);</span>
+
+<span style = "background-color:#dfd">	std::string word = "death";</span>
+	//Ð² ÑÑÐ¾Ð¼ ÑÐ»ÑÑÐ°Ðµ Ð±ÑÐ´ÐµÑ const key_type&amp; k, _Obj&amp;&amp; obj, ÑÐ°Ðº ÐºÐ°Ðº k - lvalue, obj - rvalue
+<span style = "background-color:#dfd">	table.insert_or_assign(word, 1);
+	ASSERT_TRUE(table.contains("death"));
+	ASSERT_TRUE(table.at(word) == 1);
+	table.insert_or_assign(word, 12);
+	ASSERT_TRUE(table.at(word) == 12);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Emplace, A) {
+	fefu::hash_map&lt;std::string, std::string&gt; table(10);</span>
+
+<span style = "background-color:#dfd">	table.emplace(std::make_pair(std::string("please"), std::string("please")));
+	table.emplace(std::make_pair("me", "mine"));
+	table.emplace("dog", "bark");</span>
+
+<span style = "background-color:#dfd">	ASSERT_TRUE(table.size() == 3);
+	ASSERT_TRUE(table.bucket_count() == 10);
+	ASSERT_TRUE(table.at("please") == "please");
+	ASSERT_TRUE(table.at("me") == "mine");
+	ASSERT_TRUE(table.at("dog") == "bark");
+}</span>
+
+<span style = "background-color:#dfd">TEST(TryEmplace, A) {
+	fefu::hash_map&lt;std::string, std::string&gt; table(10);</span>
+
+<span style = "background-color:#dfd">	table.try_emplace("five", "six");
+	table.try_emplace("nine", 9, '9');
+	ASSERT_TRUE(table.at("nine") == "999999999");
+}</span>
+
+<span style = "background-color:#dfd">TEST(TryEmplace, B) {
+	fefu::hash_map&lt;std::string, std::string&gt; table(10);</span>
+
+<span style = "background-color:#dfd">	std::string word = "five";
+	table.try_emplace(word, "six");
+	table.try_emplace("Six", 10, '6');
+	ASSERT_TRUE(table.at("Six") == "6666666666");
+}</span>
+
+<span style = "background-color:#dfd">TEST(TryEmplace, C) {
+	fefu::hash_map&lt;int, std::tuple&lt;int, std::string, std::string&gt;&gt; table(10);
+	std::tuple&lt;int, std::string, std::string&gt; element = { 20, "Alexander", "Master" };</span>
+
+<span style = "background-color:#dfd">	auto person_one = table.try_emplace(1, element);
+	auto person_two = table.try_emplace(2, 34, "Henrik", "Hansen");
+	ASSERT_TRUE(table[1] == element);
+	ASSERT_TRUE(person_one.second == true);
+	std::tuple&lt;int, std::string, std::string&gt; element_two = { 34, "Henrik", "Hansen" };
+	ASSERT_TRUE(table[2] == element_two);
+	ASSERT_TRUE(person_two.second == true);
+}</span>
+
+<span style = "background-color:#dfd">TEST(At, A) {
+	fefu::hash_map&lt;std::string, int&gt; table(10);
+	std::pair&lt;std::string, int&gt; element_one("death", 1);
+	std::pair&lt;std::string, int&gt; element_two("rest", 2);
+	table.insert(element_one);
+	table.insert(element_two);</span>
+
+<span style = "background-color:#dfd">	EXPECT_EQ(table.at("death"), 1);
+	EXPECT_EQ(table.at("rest"), 2);
+	EXPECT_THROW(table.at("help_me"), std::out_of_range);</span>
+
+<span style = "background-color:#dfd">}</span>
+
+<span style = "background-color:#dfd">TEST(At, B) {
+	fefu::hash_map&lt;std::string, int&gt; table(7);
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(5);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	elements[4] = { "help", 5 };</span>
+
+<span style = "background-color:#dfd">	table.insert(elements.begin(), elements.end());
+	EXPECT_EQ(table.at("death"), 1);
+	EXPECT_THROW(table.at("help_me"), std::out_of_range);
+}</span>
+
+<span style = "background-color:#dfd">TEST(At, C) {
+	fefu::hash_map&lt;std::string, int&gt; table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	table.insert(std::pair&lt;const std::string, const int&gt;("clear", 4));
+	ASSERT_TRUE(table.at("clear") == 4);</span>
+
+<span style = "background-color:#dfd">	fefu::hash_map&lt;int, int&gt; table_two;
+	table_two.insert(std::pair&lt;const int, const int&gt;(2, 4));
+	ASSERT_TRUE(table_two.at(2) == 4);
+}</span>
+
+<span style = "background-color:#dfd">TEST(At, D) {
+	fefu::hash_map&lt;std::string, int&gt; table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	const std::string key= "death";
+	const int value = table.at(key);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Size, A) {
+	fefu::hash_map&lt;std::string, int&gt; table(10);
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(2);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	table.insert(elements.begin(), elements.end());
+	ASSERT_TRUE(table.max_size() == std::numeric_limits&lt;size_t&gt;::max());
+}</span>
+
+<span style = "background-color:#dfd">TEST(Operators, A) {
+	fefu::hash_map&lt;int, int&gt; table(10);
+	table[6] = -120;
+	table[2] = 12;
+	ASSERT_TRUE(table[6] == -120);
+	ASSERT_TRUE(table[2] == 12);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Operators, B) {
+	fefu::hash_map&lt;std::string, int&gt; table(10);
+	const std::string word = "please";
+	const int number = 6;
+	table[word] = number;
+	ASSERT_TRUE(table["please"] == 6);
+	ASSERT_TRUE(table.at("please") == 6);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Operators, C) {
+	fefu::hash_map&lt;std::string, int&gt; table({ {"ab1", 1}, {"ab2", 2}, {"ab3", 3}, {"ab4", 4} });
+	fefu::hash_map&lt;std::string, int&gt; table_one(table);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Operators, D) {
+	fefu::hash_map&lt;std::string, int&gt; one_table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	fefu::hash_map&lt;std::string, int&gt; two_table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	fefu::hash_map&lt;std::string, int&gt; three_table({ {"hey", 1}, {"rest", 23}, {"help", 3}, {"clear", 11}, {"give", 11} });</span>
+
+<span style = "background-color:#dfd">	ASSERT_TRUE(one_table == two_table);
+	ASSERT_FALSE(one_table == three_table);
+	ASSERT_FALSE(two_table == three_table);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Operators, E) {
+	fefu::hash_map&lt;std::string, int&gt; one_table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	fefu::hash_map&lt;std::string, int&gt; two_table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11} });</span>
+
+<span style = "background-color:#dfd">	ASSERT_FALSE(one_table == two_table);</span>
+
+<span style = "background-color:#dfd">	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(4);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "help", 3 };
+	elements[3] = { "my", 4 };
+	fefu::hash_map&lt;std::string, int&gt; three_table(elements.begin(), elements.end());</span>
+
+<span style = "background-color:#dfd">	ASSERT_FALSE(two_table == three_table);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Bucket, A) {
+	fefu::hash_map&lt;std::string, int&gt; table({ {"give", 11}, {"love", 41}, {"me", 3}, {"death", 41} });
+	ASSERT_TRUE(table.bucket("give"));
+	ASSERT_TRUE(table.bucket("love"));</span>
+
+<span style = "background-color:#dfd">	table.insert(std::pair&lt;std::string, int&gt;("help", 4));
+	table.insert(std::pair&lt;std::string, int&gt;("death", 1));
+	table.insert(std::pair&lt;std::string, int&gt;("make", 8));
+	table.insert(std::pair&lt;std::string, int&gt;("peace", 6));
+	table.insert(std::pair&lt;std::string, int&gt;("pie", 9));</span>
+
+<span style = "background-color:#dfd">	ASSERT_TRUE(table.bucket("help"));
+	ASSERT_TRUE(table.bucket("death"));
+	ASSERT_TRUE(table.bucket("me"));
+	ASSERT_TRUE(table.bucket("make"));
+	ASSERT_TRUE(table.bucket("pie"));
+}</span>
+
+<span style = "background-color:#dfd">TEST(Load, A) {
+	fefu::hash_map&lt;int, int&gt; table(10);
+	for (size_t i = 0; i &lt; 3; i++) {
+		std::pair&lt;int, int&gt; p = std::make_pair(i, i);
+		table.insert(p);
+	}
+	table.max_load_factor(0.5);
+	ASSERT_TRUE(table.max_load_factor() == 0.5);
+	ASSERT_TRUE(table.load_factor() == 0.3f);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Load, B) {
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(4);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	fefu::hash_map&lt;std::string, int&gt; table(elements.begin(), elements.end());</span>
+
+<span style = "background-color:#dfd">	ASSERT_TRUE(table.bucket("rest"));
+	ASSERT_TRUE(table.bucket("death"));
+	ASSERT_TRUE(table.bucket("in"));
+	ASSERT_TRUE(table.bucket("peace"));</span>
+
+<span style = "background-color:#dfd">	ASSERT_TRUE(table.max_load_factor() == 0.75);
+	ASSERT_TRUE(table.load_factor() == 0.5f);
+	table.insert(std::pair&lt;std::string, int&gt;("help", 53));
+	table.insert(std::pair&lt;std::string, int&gt;("mine", 21));
+	table.insert(std::pair&lt;std::string, int&gt;("make", -8));
+	ASSERT_TRUE(table.load_factor() == 0.4375f);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Reserve, A) {
+	fefu::hash_map&lt;std::string, std::string&gt; table;
+	table.reserve(10);</span>
+
+<span style = "background-color:#dfd">	ASSERT_TRUE(table.size() == 0);
+	table.insert(std::pair&lt;std::string, std::string&gt;("help", "me"));
+	table.insert(std::pair&lt;std::string, std::string&gt;("mine", "bark"));
+	table.insert(std::pair&lt;std::string, std::string&gt;("make", "dog"));
+	ASSERT_TRUE(table.size() == 3);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Erase, A) {
+	fefu::hash_map&lt;std::string, int&gt; table({ {"give", 11}, {"love", 41}, {"me", 3}, {"death", 41} });
+	table.erase("give");
+	ASSERT_FALSE(table.contains("give"));</span>
+
+<span style = "background-color:#dfd">	table.clear();
+	ASSERT_TRUE(table.empty());
+}</span>
+
+<span style = "background-color:#dfd">TEST(Erase, B) {
+	fefu::hash_map&lt;std::string, int&gt; table(10);
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(5);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	elements[4] = { "help", 5 };
+	table.insert(elements.begin(), elements.end());</span>
+
+<span style = "background-color:#dfd">	for (auto i = table.begin(); i != table.end(); i++) {
+		table.erase(i);
+	}
+	ASSERT_TRUE(table.empty());
+}</span>
+
+<span style = "background-color:#dfd">TEST(Erase, C) {
+	fefu::hash_map&lt;std::string, int&gt; table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	fefu::hash_map&lt;std::string, int&gt; other_table({ {"mine", 112}, {"my", -33} });
+	ASSERT_TRUE(table.erase("food") == 0);</span>
+
+<span style = "background-color:#dfd">	auto element_one = table.cbegin().operator++();
+	ASSERT_TRUE(table.erase(table.cbegin()) == element_one);
+	auto element = other_table.cbegin();
+	ASSERT_TRUE(table.erase(element) == table.end());
+}</span>
+
+<span style = "background-color:#dfd">TEST(Erase, D) {
+	fefu::hash_map&lt;std::string, int&gt; table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	fefu::hash_map&lt;std::string, int&gt; other_table({ {"hey", 1}, {"cup", -23}, {"please", 3}, {"make", 32}, {"hello", 11} });</span>
+
+<span style = "background-color:#dfd">	ASSERT_TRUE(table.erase(other_table.begin()) == table.end());
+}</span>
+
+<span style = "background-color:#dfd">TEST(Erase, E) {
+	std::vector&lt;std::pair&lt;std::string, int&gt;&gt; elements(4);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	fefu::hash_map&lt;std::string, int&gt; table(elements.begin(), elements.end());</span>
+
+<span style = "background-color:#dfd">	fefu::hash_map&lt;std::string, int&gt; other_table({ {"death", 1}, {"rest", 2}, { "in", 3 }, { "peace", 4 } });
+	table.erase(other_table.cbegin(), other_table.cend());
+	ASSERT_TRUE(table.size() == 0);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Erase, F) {
+	fefu::hash_map&lt;int, int&gt; table = { {-18, 1}, {38, 2}, {28, 3}, {-936, 4}, {0, 5} };
+	auto element = table.cbegin();
+	element++;
+	element++;</span>
+
+<span style = "background-color:#dfd">	table.erase(table.cbegin(), element);
+	ASSERT_TRUE(table.size() == 3);
+	table.erase(table.cbegin(), table.cend());
+	ASSERT_TRUE(table.size() == 0);
+}</span>
+
+<span style = "background-color:#dfd">TEST(Merge, A) {
+	fefu::hash_map&lt;std::string, int&gt; table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	fefu::hash_map&lt;std::string, int&gt; other_table({ {"death", 1}, {"cup", -23}, {"please", 3}, {"make", 32}, {"hello", 11} });</span>
+
+<span style = "background-color:#dfd">	table.merge(other_table);
+	ASSERT_TRUE(other_table.size() == 1);
+	ASSERT_TRUE(other_table.contains("death"));
+	ASSERT_TRUE(table.size() == 9);
+	ASSERT_TRUE(table.contains("cup"));
+	ASSERT_TRUE(table.contains("please"));
+	ASSERT_TRUE(table.contains("make"));
+	ASSERT_TRUE(table.contains("hello"));
+}</span>
+
+<span style = "background-color:#dfd">TEST(Merge, B) {
+	fefu::hash_map&lt;std::string, int&gt; table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	fefu::hash_map&lt;std::string, int&gt; other_table({ {"death", 2}, {"cup", -23}, {"please", 3}, {"make", 32}, {"hello", 11} });
+	table.merge(std::move(other_table));</span>
+
+<span style = "background-color:#dfd">	ASSERT_TRUE(table.contains("cup"));
+	ASSERT_TRUE(table.contains("please"));
+	ASSERT_TRUE(table.contains("make"));
+	ASSERT_TRUE(table.contains("hello"));
+	ASSERT_TRUE(table.at("death") == 1);</span>
+
+<span style = "background-color:#dfd">	for (auto i : other_table) {
+		std::cout &lt;&lt; i.first &lt;&lt; i.second &lt;&lt; std::endl;
+	}
+}</span></pre>
+	</body>
+</html>
